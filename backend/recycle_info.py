@@ -1,31 +1,28 @@
 import requests
 import os
 
-BASE_URL = 'https://apis.data.go.kr/B552584/kecoapi/reutilCltRtrvlBzentyService/getReutilCltRtrvlBzentyInfo'
+BASE_URL = (
+    'https://apis.data.go.kr/B552584/kecoapi/reutilCltRtrvlBzentyService/'
+    'getReutilCltRtrvlBzentyInfo'
+)
 SERVICE_KEY = os.environ.get('RECYCLE_INFO_KEY')
 
 def fetch_public_recycling_data(
-        # 페이지 번호
-        page_no: int = 1,
-        # 한 페이지 결과 수
-        num_of_rows: int = 10,
-        # 데이터 반환 타입
-        return_type: str = 'json',
-        # 종류
-        knd_nm: str | None = None,
-        # 지역명
-        rgn_nm: str | None = None,
-        # 주소
-        addr: str | None = None,
+    page_no: int = 1,          # 페이지 번호
+    return_type: str = 'json', # json / xml
+    knd_nm: str | None = None, # 종류
+    rgn_nm: str | None = None, # 지역명
+    addr: str | None = None,   # 주소(일부)
+    timeout_sec: int = 15,     # 타임아웃(옵션)
 ):
     if not SERVICE_KEY:
-        raise ValueError('환경 변수 - 재활용 폐기물 수거회수처 정보 조회 서비스 KEY가 설정되지 않았어요.')
-    
+        raise ValueError('환경 변수 RECYCLE_INFO_KEY가 설정되지 않았어요. .env를 확인해 주세요.')
+
     params = {
         'serviceKey': SERVICE_KEY,
         'pageNo': page_no,
-        'numOfRows': num_of_rows,
-        'returnType': return_type
+        'numOfRows': 50,       # ← 한 페이지 결과 수 고정
+        'returnType': return_type,
     }
 
     if knd_nm:
@@ -35,11 +32,9 @@ def fetch_public_recycling_data(
     if addr:
         params['addr'] = addr
 
-    # 요청
-    response = requests.get(BASE_URL, params=params, timeout=5)
+    response = requests.get(BASE_URL, params=params, timeout=timeout_sec)
     response.raise_for_status()
 
     if return_type.lower() == 'json':
         return response.json()
-    else:
-        return response.text
+    return response.text
