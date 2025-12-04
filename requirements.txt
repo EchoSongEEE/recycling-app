@@ -7,3 +7,4 @@ streamlit
 pandas
 streamlit_folium
 streamlit_js_eval
+streamlit-geolocation
