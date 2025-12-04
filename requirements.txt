@@ -3,3 +3,7 @@ uvicorn[standard]
 requests
 python-dotenv
 openai
+streamlit
+pandas
+streamlit_folium
+streamlit_js_eval

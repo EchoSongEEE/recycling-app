@@ -1,9 +1,8 @@
 import requests
 import os
 
-PREDICTION_KEY = os.environ.get("AZURE_CV_PREDICTION_KEY", "YOUR_DEFAULT_KEY")
-ENDPOINT = os.environ.get("AZURE_CV_ENDPOINT", "YOUR_DEFAULT_ENDPOINT")
-PROJECT_ID = "YOUR_PROJECT_ID" # Azure Custom Vision 프로젝트 ID
+PREDICTION_KEY = os.environ.get("AZURE_CV_PREDICTION_KEY")
+ENDPOINT = os.environ.get("AZURE_CV_ENDPOINT")
 PUBLISHED_ITERATION_NAME = "Iteration1" # 학습시킨 모델 버전 이름
 
 def call_custom_vision(image_data):
@@ -12,7 +11,7 @@ def call_custom_vision(image_data):
         return {"error": "이미지 데이터가 비어있습니다."}
 
     # Custom Vision API URL 
-    url = f"{ENDPOINT}customvision/v3.0/Prediction/{PROJECT_ID}/classify/iterations/{PUBLISHED_ITERATION_NAME}/image"
+    url = f"{ENDPOINT}"
     
     # 헤더 설정: API 키와 이미지 형식 명시
     headers = {
