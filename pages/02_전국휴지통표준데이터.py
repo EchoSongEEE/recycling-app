@@ -1,155 +1,271 @@
-import streamlit as st
+from __future__ import annotations
+
+import folium
 import pandas as pd
-import pydeck as pdk
+import streamlit as st
+from streamlit_folium import st_folium
+from streamlit_geolocation import streamlit_geolocation
 
-from backend.trash_can_info import fetch_trash_can_data
+from backend.trash_can_info import (
+    annotate_distance,
+    filter_by_gu,
+    find_nearby,
+    get_trash_cans,
+    search_by_keyword,
+)
 
-st.title("🗑️ 공공 휴지통 위치 조회 & 지도 보기")
+st.set_page_config(
+    page_title="서울 휴지통 지도",
+    page_icon="🗑️",
+    layout="wide",
+)
 
-st.caption("공공데이터 포털 휴지통 위치 정보를 기반으로, 지역/도로명/종류별 휴지통 위치를 조회하고 지도에서 확인할 수 있습니다.")
+DEFAULT_CENTER = (37.5665, 126.9780)  # 서울 시청
+DEFAULT_ZOOM = 12
 
-st.markdown("---")
+st.markdown(
+    """
+    <style>
+    /* 첫 번째 컬럼(왼쪽): 세로 스크롤 가능 영역로 제한 */
+    div[data-testid="column"]:nth-of-type(1) > div {
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
 
-with st.form("trash_can_search_form", clear_on_submit=False):
-    st.subheader("1️⃣ 검색 조건 입력")
+    /* 두 번째 컬럼(오른쪽): 화면 상단에 sticky 고정 */
+    div[data-testid="column"]:nth-of-type(2) > div {
+        position: sticky;
+        top: 80px;
+        align-self: flex-start;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-    col1, col2 = st.columns(2)
 
-    with col1:
-        ctpv_nm = st.text_input("시도명", placeholder="예: 서울특별시")
-        sgg_nm = st.text_input("시군구명", placeholder="예: 종로구")
+@st.cache_data
+def load_data() -> pd.DataFrame:
+    return get_trash_cans()
 
-    with col2:
-        road_addr = st.text_input("도로명 주소(일부)", placeholder="예: 사직로")
-        trash_knd = st.text_input("휴지통 종류 (선택)", placeholder="예: 일반, 재활용 등")
 
-    col_page = st.columns(2)
-    with col_page[0]:
-        page_no = st.number_input("페이지 번호", min_value=1, value=1, step=1)
-    with col_page[1]:
-        num_rows = st.slider("한 페이지 결과 수", min_value=10, max_value=200, value=50, step=10)
+def create_map(
+    df: pd.DataFrame,
+    center: tuple[float, float],
+    zoom: int = 13,
+    user_location: tuple[float, float] | None = None,
+    radius_m: int | None = None,
+    selected_bin_id: str | None = None,
+) -> folium.Map:
+    m = folium.Map(location=center, zoom_start=zoom, tiles="CartoDB positron")
 
-    submitted = st.form_submit_button("🔎 휴지통 위치 조회")
+    # 휴지통 마커
+    for _, row in df.iterrows():
+        addr = row.get("road_address") or row.get("jibun_address") or ""
+        popup_html = f"""
+        <b>{row['name']}</b><br/>
+        {addr}<br/>
+        {row['gu']} · {row.get('type') or '일반 휴지통'}
+        """
 
-if submitted:
-    try:
-        with st.spinner("공공데이터에서 정보를 조회 중입니다..."):
-            data = fetch_trash_can_data(
-                pageNo=page_no,
-                numOfRows=num_rows,
-                type="json",
-                CTPV_NM=ctpv_nm or None,
-                SGG_NM=sgg_nm or None,
-                LCTN_ROAD_NM=road_addr or None,
-                TRASH_CAN_KND=trash_knd or None,
+        is_selected = selected_bin_id is not None and row["id"] == selected_bin_id
+        icon_color = "blue"
+        if is_selected:
+            icon_color = "orange"  # 선택된 휴지통은 주황색으로 강조
+
+        folium.Marker(
+            location=[row["lat"], row["lng"]],
+            icon=folium.Icon(color=icon_color, icon="trash", prefix="fa"),
+            popup=folium.Popup(popup_html, max_width=250),
+        ).add_to(m)
+
+    # 내 위치 마커 (빨간색)
+    if user_location is not None:
+        folium.Marker(
+            location=user_location,
+            icon=folium.Icon(color="red", icon="user", prefix="fa"),
+            popup="내 위치",
+        ).add_to(m)
+
+        if radius_m is not None:
+            folium.Circle(
+                location=user_location,
+                radius=radius_m,
+                color="#ff6666",
+                fill=False,
+            ).add_to(m)
+
+    return m
+
+
+def main():
+    if "map_center" not in st.session_state:
+        st.session_state["map_center"] = DEFAULT_CENTER
+    if "map_zoom" not in st.session_state:
+        st.session_state["map_zoom"] = DEFAULT_ZOOM
+    if "selected_bin_id" not in st.session_state:
+        st.session_state["selected_bin_id"] = None
+    if "list_limit" not in st.session_state:
+        st.session_state["list_limit"] = 20  # 리스트 처음에 20개만
+
+    st.title("서울 휴지통 지도 🗺️")
+    st.caption(
+        "서울특별시 마포구 · 구로구 · 노원구 · 서초구 · 성북구 · 중랑구 공공 휴지통 위치 서비스"
+    )
+
+    df = load_data()
+
+    with st.sidebar:
+        st.header("검색 / 필터")
+
+        gu_options = ["전체", "마포구", "구로구", "노원구", "서초구", "성북구", "중랑구"]
+        selected_gu = st.selectbox("자치구 선택", gu_options, index=0)
+
+        search_text = st.text_input(
+            "장소명 또는 도로명/지번 주소 검색",
+            placeholder="예: 독막로 241, 서초역...",
+        )
+
+    left, right = st.columns([0.4, 0.6])
+
+    user_location: tuple[float, float] | None = None
+    nearby_mode: bool = False
+    radius_m: int = 300
+
+    # 오른쪽 영역
+    with right:
+        st.subheader("지도")
+
+        row1_col1, row1_col2 = st.columns([0.1, 0.9])
+
+        with row1_col1:
+            loc = streamlit_geolocation()
+
+        with row1_col2:
+            if isinstance(loc, dict) and loc.get("latitude") is not None:
+                user_location = (float(loc["latitude"]), float(loc["longitude"]))
+                # 출력 문구를 한 줄로 압축
+                st.markdown(f"**내 위치:** {user_location[0]:.5f}, {user_location[1]:.5f}")
+            else:
+                st.markdown("**📍 내 위치 정보가 없어요.**")
+
+        row2_col1, row2_col2 = st.columns([0.35, 0.65])
+        with row2_col1:
+            nearby_mode = st.checkbox("내 주변만", value=False)
+        with row2_col2:
+            radius_m = st.slider(
+                "반경 (m)",
+                min_value=100,
+                max_value=1000,
+                value=300,
+                step=50,
             )
 
-        # --- JSON 파싱 ---
-        body = data.get("response", {}).get("body", {})
-        items = body.get("items")
+    has_user_loc = user_location is not None
 
-        if isinstance(items, dict):
-            items = items.get("item", [])
-        if items is None:
-            items = []
+    filtered = filter_by_gu(df, selected_gu if selected_gu != "전체" else None)
+    filtered = search_by_keyword(filtered, search_text)
 
-        if not items:
-            st.warning("검색 조건에 해당하는 휴지통 위치를 찾지 못했습니다. 조건을 완화해서 다시 시도해 보세요.")
+    if nearby_mode and has_user_loc:
+        filtered = find_nearby(
+            filtered,
+            user_location[0],
+            user_location[1],
+            radius_m=radius_m,
+            limit=None,
+        )
+    elif has_user_loc:
+        filtered = annotate_distance(filtered, user_location[0], user_location[1])
+    else:
+        filtered = filtered.copy()
+        filtered["distance_m"] = None
+
+    with left:
+        st.subheader("휴지통 목록")
+
+        st.caption(
+            f"조건에 해당하는 휴지통: **{len(filtered)}개**"
+            + (
+                " (내 위치 기준 거리순)"
+                if nearby_mode and has_user_loc
+                else " (자치구/검색 기준)"
+            )
+        )
+
+        if filtered.empty:
+            st.warning("조건에 맞는 휴지통이 없어요 🥲", icon="⚠️")
         else:
-            df = pd.DataFrame(items)
+            # 거리 정보가 있으면 거리순, 아니면 구/이름순
+            if "distance_m" in filtered.columns and filtered["distance_m"].notnull().any():
+                filtered_disp = filtered.sort_values("distance_m")
+            else:
+                filtered_disp = filtered.sort_values(["gu", "name"])
 
-            # 결과 개수 표시
-            st.markdown("---")
-            st.subheader("2️⃣ 조회 결과")
+            limit = st.session_state["list_limit"]
+            subset = filtered_disp.head(limit)
 
-            result_count = len(df)
-            col_info1, col_info2 = st.columns(2)
-            with col_info1:
-                st.metric("조회된 휴지통 개수", f"{result_count} 개")
-            with col_info2:
-                st.write(
-                    f"**필터** · 시도: `{ctpv_nm or '전체'}` / 시군구: `{sgg_nm or '전체'}` / 종류: `{trash_knd or '전체'}`"
+            for _, row in subset.iterrows():
+                dist_m = row.get("distance_m", None)
+                dist_text = (
+                    f"{dist_m:.0f} m" if dist_m is not None and not pd.isna(dist_m) else "- m"
                 )
 
-            # 탭으로 테이블 / 지도 나누기
-            tab_table, tab_map = st.tabs(["📋 데이터 테이블", "🗺️ 지도에서 보기"])
+                with st.container(border=True):
+                    st.markdown(f"**{row['name']}**")
+                    addr = row.get("road_address") or row.get("jibun_address") or ""
+                    if addr:
+                        st.caption(addr)
 
-            with tab_table:
-                st.dataframe(
-                    df[
-                        [
-                            "INSTL_PLC_NM",
-                            "CTPV_NM",
-                            "SGG_NM",
-                            "LCTN_ROAD_NM",
-                            "TRASH_CAN_KND",
-                            "MNG_INST_NM",
-                            "MNG_INST_TELNO",
-                        ]
-                    ],
-                    use_container_width=True,
-                )
+                    detail_line = f"{row['gu']} · {row.get('type') or '일반 휴지통'}"
+                    if isinstance(row.get("detail"), str) and row["detail"].strip():
+                        detail_line += f" · {row['detail']}"
+                    st.write(detail_line)
 
-            with tab_map:
-                if {"LAT", "LOT"}.issubset(df.columns):
-                    df_map = df[
-                        [
-                            "LAT",
-                            "LOT",
-                            "INSTL_PLC_NM",
-                            "CTPV_NM",
-                            "SGG_NM",
-                            "LCTN_ROAD_NM",
-                            "TRASH_CAN_KND",
-                            "MNG_INST_NM",
-                        ]
-                    ].copy()
+                    if has_user_loc:
+                        st.text(f"📍 내 위치로부터 {dist_text}")
 
-                    # 문자열 → 숫자 변환
-                    df_map["LAT"] = pd.to_numeric(df_map["LAT"], errors="coerce")
-                    df_map["LOT"] = pd.to_numeric(df_map["LOT"], errors="coerce")
-                    df_map = df_map.dropna(subset=["LAT", "LOT"])
-                    df_map = df_map.rename(columns={"LAT": "lat", "LOT": "lon"})
+                    # 리스트 아이템에서 지도 포커스
+                    if st.button("지도에서 보기", key=f"focus-{row['id']}"):
+                        st.session_state["selected_bin_id"] = row["id"]
+                        st.session_state["map_center"] = (row["lat"], row["lng"])
+                        st.session_state["map_zoom"] = 18
 
-                    if df_map.empty:
-                        st.info("위도/경도 정보가 없어 지도를 표시할 수 없습니다.")
-                    else:
-                        st.markdown("지도를 드래그/줌해서 위치를 자세히 볼 수 있습니다. 마커에 마우스를 올리면 상세 정보가 표시됩니다.")
+            # 더 보기
+            if len(filtered_disp) > limit:
+                if st.button("더 보기", key="load_more"):
+                    st.session_state["list_limit"] += 20
+            else:
+                st.caption("모든 휴지통 정보를 다 불러왔어요 🙂")
 
-                        layer = pdk.Layer(
-                            "ScatterplotLayer",
-                            df_map,
-                            get_position="[lon, lat]",
-                            get_radius=40,
-                            get_fill_color=[0, 122, 255, 180],
-                            pickable=True,
-                        )
+    with right:
+        if filtered.empty:
+            st.info("지도로 표시할 데이터가 없어요.", icon="ℹ️")
+            return
 
-                        view_state = pdk.ViewState(
-                            latitude=df_map["lat"].mean(),
-                            longitude=df_map["lon"].mean(),
-                            zoom=12,
-                            pitch=0,
-                        )
+        center = st.session_state.get("map_center", DEFAULT_CENTER)
+        zoom = st.session_state.get("map_zoom", DEFAULT_ZOOM)
 
-                        tooltip = {
-                            "text": "설치장소: {INSTL_PLC_NM}\n"
-                            "종류: {TRASH_CAN_KND}\n"
-                            "주소: {LCTN_ROAD_NM}\n"
-                            "관리기관: {MNG_INST_NM}"
-                        }
+        # 내 위치가 있고, 아직 특정 휴지통을 선택하지 않았다면 내 위치를 중심으로
+        if has_user_loc and st.session_state.get("selected_bin_id") is None:
+            center = user_location
+            zoom = 15 if nearby_mode else 13
 
-                        st.pydeck_chart(
-                            pdk.Deck(
-                                layers=[layer],
-                                initial_view_state=view_state,
-                                tooltip=tooltip,
-                            )
-                        )
-                else:
-                    st.info("LAT / LOT 컬럼이 없어 지도 표시가 불가능합니다.")
+        folium_map = create_map(
+            df=filtered,
+            center=center,
+            zoom=zoom,
+            user_location=user_location,
+            radius_m=radius_m if (nearby_mode and has_user_loc) else None,
+            selected_bin_id=st.session_state.get("selected_bin_id"),
+        )
 
-    except Exception as e:
-        st.error(f"API 호출 에러: {e}")
-        with st.expander("🔎 상세 오류 보기"):
-            st.exception(e)
+        st_folium(
+            folium_map,
+            width="100%",
+            height=600,
+        )
+
+
+if __name__ == "__main__":
+    main()
