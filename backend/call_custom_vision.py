@@ -1,8 +1,8 @@
 import requests
 import os
 
-PREDICTION_KEY = os.environ.get("AZURE_CV_PREDICTION_KEY", "YOUR_DEFAULT_KEY")
-ENDPOINT = os.environ.get("AZURE_CV_ENDPOINT", "YOUR_DEFAULT_ENDPOINT")
+PREDICTION_KEY = os.environ.get("AZURE_CV_PREDICTION_KEY")
+ENDPOINT = os.environ.get("AZURE_CV_ENDPOINT")
 PROJECT_ID = "YOUR_PROJECT_ID" # Azure Custom Vision 프로젝트 ID
 PUBLISHED_ITERATION_NAME = "Iteration1" # 학습시킨 모델 버전 이름
 
