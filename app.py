@@ -7,19 +7,43 @@ from views.zerowaste_map import page as zerowaste_page
 from views.dropoff_map import page as dropoff_page
 
 st.set_page_config(
-    page_title="재활용 분리배출 코칭",
-    page_icon="♻️",
+    page_title="쓰담 | 재활용 분리배출 코치",
+    page_icon="🌿",
     layout="wide",
 )
 
-nav = st.navigation(
-    [
-        st.Page(coach_page, title="재활용 분리배출 코칭"),
-        st.Page(trash_page, title="서울시 휴지통 지도"),
-        st.Page(waste_page, title="서울시 폐기물 신청 지도"),
-        st.Page(zerowaste_page, title="제로웨이스트 지도"),
-        st.Page(dropoff_page, title="분리배출장소 지도"),
-    ]
-)
+pages = [
+    st.Page(
+        coach_page,
+        title="재활용 분리배출 코칭",
+        icon="🌿",
+        url_path="coach",       
+    ),
+    st.Page(
+        trash_page,
+        title="서울시 휴지통 지도",
+        icon="🗑️",
+        url_path="trash-cans",     
+    ),
+    st.Page(
+        waste_page,
+        title="서울시 폐기물 신청 지도",
+        icon="🚚",
+        url_path="waste-request", 
+    ),
+    st.Page(
+        zerowaste_page,
+        title="제로웨이스트 샵 찾기",
+        icon="🌱",
+        url_path="zerowaste-shops",  
+    ),
+    st.Page(
+        dropoff_page,
+        title="분리배출 장소 지도",
+        icon="📦",
+        url_path="dropoff-spots",   
+    ),
+]
 
+nav = st.navigation(pages)
 nav.run()

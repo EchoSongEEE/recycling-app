@@ -6,21 +6,15 @@ from pathlib import Path
 import folium
 import pandas as pd
 import streamlit as st
-import streamlit as st
 from streamlit_folium import st_folium
 
 
-BASE_DIR = Path(__file__).resolve().parents[1]  
+BASE_DIR = Path(__file__).resolve().parents[1]
 GEOJSON_PATH = BASE_DIR / "data/recycle_link" / "서울_자치구_경계_2017.geojson"
 LINK_CSV_PATH = BASE_DIR / "data/recycle_link" / "폐기물_신청_링크.csv"
 
-GU_NAME_KEY = "SIG_KOR_NM"  
+GU_NAME_KEY = "SIG_KOR_NM"
 
-st.set_page_config(
-    page_title="쓰담 | 서울시 폐기물 신청 지도",
-    page_icon="🌿",
-    layout="wide",
-)
 
 @st.cache_data
 def load_gu_links() -> dict[str, str]:
@@ -31,6 +25,7 @@ def load_gu_links() -> dict[str, str]:
     df["자치구"] = df["자치구"].astype(str).str.strip()
     df["신청링크"] = df["신청링크"].astype(str).str.strip()
     return dict(zip(df["자치구"], df["신청링크"]))
+
 
 @st.cache_data
 def load_seoul_geojson() -> dict:
@@ -73,7 +68,6 @@ def _get_feature_centroid(feature: dict) -> tuple[float, float] | None:
 
 
 def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map:
-
     m = folium.Map(
         location=(37.5665, 126.9780),
         zoom_start=11,
@@ -81,6 +75,7 @@ def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map
         zoom_control=True,
     )
 
+    # 배경 흰색으로
     white_bg_css = """
     <style>
     .leaflet-container {
@@ -90,7 +85,7 @@ def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map
     """
     m.get_root().html.add_child(folium.Element(white_bg_css))
 
-
+    # 각 구에 링크/텍스트 설정
     for feat in geojson_data.get("features", []):
         props = feat.get("properties", {})
         gu_name = str(props.get(GU_NAME_KEY, "")).strip()
@@ -107,21 +102,20 @@ def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map
 
     def style_function(feature):
         return {
-            "fillColor": "#f5f5f5",   
-            "color": "#808080",      
+            "fillColor": "#f5f5f5",
+            "color": "#808080",
             "weight": 1.5,
             "fillOpacity": 0.95,
         }
 
     def highlight_function(feature):
         return {
-            "fillColor": "#93c5fd",   
+            "fillColor": "#93c5fd",
             "color": "#2563eb",
             "weight": 2.5,
             "fillOpacity": 0.9,
         }
 
-    # GeoJson 레이어
     gj = folium.GeoJson(
         geojson_data,
         name="서울 자치구",
@@ -141,10 +135,10 @@ def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map
     )
     gj.add_to(m)
 
-    # 서울 영역만 화면에 꽉 차게
+    # 서울 전체가 화면에 들어오도록
     m.fit_bounds(gj.get_bounds())
 
-    # 각 구 폴리곤 위에 이름 라벨 찍기 (항상 보이도록)
+    # 각 구 중앙에 라벨 찍기
     for feat in geojson_data.get("features", []):
         props = feat.get("properties", {})
         gu_name = str(props.get(GU_NAME_KEY, "")).strip()
@@ -169,15 +163,12 @@ def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map
             ),
         ).add_to(m)
 
-
     return m
 
 
-def main():
+def page():
     st.title("🗺️ 서울시 폐기물 신청 지도")
-    st.caption(
-        "구를 클릭하면 폐기물 신청 링크를 팝업으로 제공해요."
-    )
+    st.caption("구를 클릭하면 폐기물 신청 링크를 팝업으로 제공해요.")
 
     try:
         gu_links = load_gu_links()
@@ -193,6 +184,3 @@ def main():
         width="100%",
         height=520,
     )
-
-if __name__ == "__main__":
-    main()
