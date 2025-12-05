@@ -3,7 +3,9 @@ import folium
 from streamlit_folium import st_folium
 from streamlit_js_eval import get_geolocation
 
-st.subheader("🗺️ 분리배출 장소 지도(서울시)")
+st.set_page_config(page_title="쓰담 | 서울시 분리배출 장소 지도", page_icon="🌿")
+
+st.subheader("🗺️ 서울시 분리배출 장소 지도")
 
 # 지도 중심 좌표 설정 (사용자의 현위치 / 기본좌표 - 서울시청)
 location = get_geolocation()

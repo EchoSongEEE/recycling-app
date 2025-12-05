@@ -17,8 +17,8 @@ LINK_CSV_PATH = BASE_DIR / "data/recycle_link" / "폐기물_신청_링크.csv"
 GU_NAME_KEY = "SIG_KOR_NM"  
 
 st.set_page_config(
-    page_title="서울시 폐기물 신청 지도",
-    page_icon="🗑️",
+    page_title="쓰담 | 서울시 폐기물 신청 지도",
+    page_icon="🌿",
     layout="wide",
 )
 
@@ -177,7 +177,7 @@ def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map
 
 
 def main():
-    st.title("서울시 폐기물 신청 지도 🗺️")
+    st.title("🗺️ 서울시 폐기물 신청 지도")
     st.caption(
         "구를 클릭하면 폐기물 신청 링크를 팝업으로 제공해요."
     )

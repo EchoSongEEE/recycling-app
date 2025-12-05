@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from backend.shop_finder import get_shops_by_location
 
-st.set_page_config(page_title="제로웨이스트 샵 찾기", page_icon="🌿")
+st.set_page_config(page_title="쓰담 | 제로웨이스트 샵 찾기", page_icon="🌿")
 
 st.title("🌿 제로웨이스트 & 리필 스테이션 찾기")
 st.caption(
