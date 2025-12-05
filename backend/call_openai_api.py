@@ -1,11 +1,16 @@
 from openai import OpenAI
 import os
+import streamlit as st 
+
+try:
+    AZURE_OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"] 
+except KeyError:
+    AZURE_OPENAI_API_KEY = None
 
 AZURE_OPENAI_ENDPOINT = os.environ.get(
     "AZURE_OPENAI_ENDPOINT",
     "https://smu-team8-openai.openai.azure.com/openai/v1",
 )
-AZURE_OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 AZURE_OPENAI_DEPLOYMENT = "gpt-4o-mini"
 
 client = OpenAI(
