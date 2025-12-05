@@ -22,8 +22,6 @@ st.set_page_config(
     layout="wide",
 )
 
-
-
 @st.cache_data
 def load_gu_links() -> dict[str, str]:
     df = pd.read_csv(LINK_CSV_PATH, encoding="utf-8-sig")
@@ -33,7 +31,6 @@ def load_gu_links() -> dict[str, str]:
     df["자치구"] = df["자치구"].astype(str).str.strip()
     df["신청링크"] = df["신청링크"].astype(str).str.strip()
     return dict(zip(df["자치구"], df["신청링크"]))
-
 
 @st.cache_data
 def load_seoul_geojson() -> dict:
