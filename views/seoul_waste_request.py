@@ -15,6 +15,7 @@ LINK_CSV_PATH = BASE_DIR / "data/recycle_link" / "폐기물_신청_링크.csv"
 
 GU_NAME_KEY = "SIG_KOR_NM"
 
+FEEDBACK_URL = "https://github.com/EchoSongEEE/recycling-app/issues/new?title=[자치구 폐기물 신청 링크 에러]&body=어떤+자치구+신청+링크에서+에러가+있었는지+작성해주세요.+링크+변동이+있다면+변경된+링크를+삽입해주시면+쓰담에게+많은+도움이+됩니다!"
 
 @st.cache_data
 def load_gu_links() -> dict[str, str]:
@@ -184,3 +185,11 @@ def page():
         width="100%",
         height=520,
     )
+
+                # 서비스 오류 신고 
+    with st.expander("🚨 서비스 오류 / 잘못된 안내 신고하기"):
+        st.write(
+            "자치구 폐기물 신청 페이지 주소가 변경되었거나, 서비스 오류가 있으면 아래 버튼을 눌러 알려주세요. "
+            "GitHub 이슈에 내용을 남기면 개발자가 확인 후 수정합니다."
+        )
+        st.link_button("GitHub로 신고하기", FEEDBACK_URL, use_container_width=True)

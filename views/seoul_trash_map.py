@@ -15,8 +15,6 @@ from backend.trash_can_info import (
     search_by_keyword,
 )
 
-# 여기서는 set_page_config 쓰지 않음! (app.py에서만 호출)
-
 
 DEFAULT_CENTER = (37.5665, 126.9780)
 DEFAULT_ZOOM = 12
