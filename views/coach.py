@@ -3,6 +3,7 @@ import streamlit as st
 from backend.call_custom_vision import call_custom_vision
 from backend.call_openai_api import call_openai_api
 
+FEEDBACK_URL = "https://github.com/EchoSongEEE/recycling-app/issues/new?title=[버그신고]&body=어떤+이미지에서+어떤+안내가+나왔는지+작성해주세요."
 
 def page():
     st.title("♻️ 재활용 분리배출 코칭 시스템")
@@ -208,3 +209,13 @@ def page():
 
             if guide:
                 st.write(guide)
+
+                st.markdown("---")
+
+            # 서비스 오류 신고 
+            with st.expander("🚨 서비스 오류 / 잘못된 안내 신고하기"):
+                st.write(
+                    "AI가 잘못 안내했거나 서비스 오류가 있으면 아래 버튼을 눌러 알려주세요. "
+                    "GitHub 이슈에 내용을 남기면 개발자가 확인 후 수정합니다."
+                )
+                st.link_button("GitHub로 신고하기", FEEDBACK_URL, use_container_width=True)
