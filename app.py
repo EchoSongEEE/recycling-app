@@ -20,6 +20,12 @@ pages = [
         url_path="coach",       
     ),
     st.Page(
+        zerowaste_page,
+        title="제로웨이스트 샵 찾기",
+        icon="🌱",
+        url_path="zerowaste-shops",  
+    ),
+    st.Page(
         trash_page,
         title="서울시 휴지통 지도",
         icon="🗑️",
@@ -30,12 +36,6 @@ pages = [
         title="서울시 폐기물 신청 지도",
         icon="🚚",
         url_path="waste-request", 
-    ),
-    st.Page(
-        zerowaste_page,
-        title="제로웨이스트 샵 찾기",
-        icon="🌱",
-        url_path="zerowaste-shops",  
     ),
     st.Page(
         dropoff_page,
