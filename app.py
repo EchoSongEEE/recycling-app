@@ -28,7 +28,7 @@ pages = [
     st.Page(
         trash_page,
         title="서울시 휴지통 지도",
-        icon="🗑️",
+        icon="🗺️",
         url_path="trash-cans",     
     ),
     st.Page(
