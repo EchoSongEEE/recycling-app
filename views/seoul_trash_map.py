@@ -204,7 +204,7 @@ def page():
     has_user_loc = user_location is not None
 
     # 타이틀
-    st.title("🗺️ 서울시 휴지통 지도")
+    st.title("🗑️ 서울시 휴지통 지도")
     st.caption(
         "서울특별시 마포구 · 구로구 · 노원구 · 서초구 · 성북구 · 중랑구 공공 휴지통 위치 서비스를 제공해요."
     )

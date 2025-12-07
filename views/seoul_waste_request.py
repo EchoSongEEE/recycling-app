@@ -168,7 +168,7 @@ def create_seoul_map(geojson_data: dict, gu_links: dict[str, str]) -> folium.Map
 
 
 def page():
-    st.title("🗺️ 서울시 폐기물 신청 지도")
+    st.title("🚚 서울시 폐기물 신청 지도")
     st.caption("구를 클릭하면 폐기물 신청 링크를 팝업으로 제공해요.")
 
     try:
