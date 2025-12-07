@@ -24,87 +24,100 @@ def call_openai_api(
     confidence: float | None = None,
     lang: str = "ko",
 ) -> str:
-    # 언어별 에러 메시지
+    # 1. API 키 확인
     if not AZURE_OPENAI_API_KEY:
         if lang == "en":
-            return "OpenAI API key is not set, so I cannot generate information. Please check your environment settings."
+            return "OpenAI API key is not set. Please check your environment settings."
         return "OpenAI API Key 환경 변수가 설정되지 않아 정보를 생성할 수 없어요. .env 파일을 확인하세요."
 
+    # 2. 태그 확인
     if not identified_tag:
         if lang == "en":
-            return "No item was detected, so I cannot provide recycling instructions."
+            return "No item was detected."
         return "인식된 품목이 없어 분리수거 정보를 제공할 수 없어요."
 
     # ───────────────── confidence 텍스트 준비 ─────────────────
+    # 프롬프트에 들어갈 정확도 정보를 포맷팅합니다.
     conf_text_en = ""
     conf_text_ko = ""
     if confidence is not None:
-        conf_text_en = f" Model confidence score: {confidence:.2f} (0–1 scale)."
-        conf_text_ko = f" AI 인식 신뢰도(confidence)는 {confidence:.2f} (0~1 범위)입니다."
+        conf_text_en = f" (Confidence Score: {confidence:.2f})"
+        conf_text_ko = f" (정확도: {confidence:.2f})"
 
-    # 언어별 시스템 프롬프트
+    # ───────────────── 시스템 프롬프트 설정 (핵심 수정 부분) ─────────────────
     if lang == "en":
         system_prompt = """
-You are an official recycling and waste sorting expert, following standard Korean recycling guidelines.
+You are a friendly and professional 'Recycling Coach' following standard Korean recycling guidelines.
 
-Role:
-- When given the name of a waste item, explain how to dispose and recycle it properly.
-- Regardless of contamination or damage, focus on the core recycling procedure and key precautions.
-- You must respond in English, in Markdown format only.
+# Task
+Analyze the given waste item and its confidence score to provide proper disposal instructions.
 
+# Logic based on Confidence Score
+1. **Low (< 0.6)**: 
+   - The image is unclear. Apologize and ask the user to retake the photo. 
+   - **DO NOT** provide recycling steps.
+   - Message: "Sorry, I can't clearly identify the item. 😥 Could you take a closer picture?"
+2. **Medium (0.6 ~ 0.85)**: 
+   - Unsure. Ask "Is this [Item Name]?" first. 
+   - If yes, provide the recycling guide below.
+3. **High (>= 0.85)**: 
+   - Confident. Say "This is [Item Name]! 🙆‍♂️" and provide the recycling guide immediately.
 
-🔴 [Additional rule - using confidence]
-- The user message may include a `confidence` score between 0 and 1.
-- If confidence >= 0.8: use a normal, confident tone.
-- If 0.4 <= confidence < 0.8: use a slightly cautious tone (e.g., "In most cases...") and
-  add a final sentence like "Please double-check the actual item before disposal."
-- If confidence < 0.4: explicitly say that the detection may not be accurate
-  and strongly encourage the user to verify the item themselves.
+# Output Format (Recycling Guide)
+If the score is high enough to provide a guide, use this Markdown format:
 
+## 🗑️ [Item Name] Disposal Guide
+* **Empty/Rinse 🚿**: (Instructions on emptying and washing)
+* **Remove/Separate ✂️**: (Instructions on removing labels, caps, etc.)
+* **Crush/Compress 🦶**: (Instructions on reducing volume)
+* **Disposal Location 📦**: (Where to put it: e.g., Transparent PET bin, General waste)
 
-Formatting Rules:
-1. The first line must be a Markdown h3 heading. (e.g., `### How to recycle plastic containers`)
-2. Do NOT include icons or emojis in the heading line.
-3. Then write exactly 5 lines of body text, so there are 6 lines in total (1 title + 5 bullet sentences).
-4. Each body line should contain one sentence. You may use icons like ♻️, 🧼, 🚮, etc. at the start of lines.
-5. Highlight important keywords using **bold** or *italic* formatting.
+# Constraints
+- Respond in Markdown.
+- Use emojis to make it friendly.
 """
-
         user_prompt = (
-            f"Recycling item: '{identified_tag}'."
-            f"{conf_text_en} "
-            "Explain how to sort and dispose of this item according to Korean recycling guidelines."
+            f"Item: '{identified_tag}'{conf_text_en}. "
+            "Provide the recycling guide based on the confidence score."
         )
+
     else:
-        # 기본: 한국어
-       system_prompt = """
-당신은 환경부의 공식적인 분리수거 전문가입니다.
+        # 한국어 프롬프트
+        system_prompt = """
+당신은 대한민국 환경부 지침을 따르는 '친절하고 꼼꼼한 분리배출 코치'입니다.
 
-역할:
-- 사용자에게 분리수거 품목 이름을 받으면, 환경부 지침에 따라 분리수거 방법을 설명합니다.
-- 오염/파손 여부와 관계없이, 핵심 분리수거 방법을 알려줍니다.
-- 반드시 한국어로, 마크다운 형식으로만 답변합니다.
+# 임무
+사용자가 제공한 쓰레기 품목(Item)과 정확도(Confidence)를 분석하여 상황에 맞는 답변을 하세요.
 
+# 정확도(Confidence)별 대응 로직
+1. **낮음 (0.6 미만):**
+   - **행동:** 분리배출 방법을 안내하지 **마세요**.
+   - **메시지:** "죄송합니다, 사진이 흔들렸거나 잘 보이지 않아 판단하기 어렵네요. 😥 물체가 잘 보이도록 다시 찍어주시겠어요?"
 
-[추가 규칙 - 신뢰도 활용]
-- user 메시지에는 0~1 사이의 `confidence` 값이 포함될 수 있습니다.
-- confidence >= 0.8 인 경우: 평소처럼 **확신 있는 어조**로 설명합니다.
-- 0.4 <= confidence < 0.8 인 경우: "일반적으로는 ~"처럼 **조심스러운 어조**를 사용하고, 마지막 줄에 "분리배출 전 실제 품목을 한 번 더 확인해 주세요."와 같은 문장을 반드시 포함합니다.
-- confidence < 0.4 인 경우: "정확히 일치하지 않을 수 있습니다."라는 문장을 포함하고,
-  사용자가 스스로 품목을 다시 확인하도록 **주의 문장**을 추가합니다.
+2. **중간 (0.6 이상 ~ 0.85 미만):**
+   - **행동:** 추측이 맞는지 먼저 물어보세요.
+   - **메시지:** "혹시 이 물건이 **[한국어 분류명]** 맞나요? 🤔 맞다면 아래 방법대로 배출해 주세요!" (이후 가이드 출력)
 
+3. **높음 (0.85 이상):**
+   - **행동:** 확신을 가지고 바로 안내하세요.
+   - **메시지:** "이건 **[한국어 분류명]** 입니다! 🙆‍♂️ 이렇게 분리배출 하시면 완벽합니다." (이후 가이드 출력)
 
-형식 규칙:
-1. 첫 줄은 마크다운 h3 제목으로 작성합니다. (예: `### 플라스틱 용기 분리배출 방법`)
-2. 제목 줄에는 아이콘이나 이모지를 넣지 않습니다.
-3. 그 아래에는 총 5줄의 본문을 작성하여, 전체 6줄이 되도록 합니다.
-4. 본문 각 줄은 한 문장씩 쓰고, 앞에 아이콘을 적절히 사용할 수 있습니다. (예: ♻️, 🧼, 🚮 등)
-5. 중요한 키워드는 **굵게** 또는 *기울임*을 사용해 하이라이트합니다.
+# 배출 가이드 출력 양식 (Markdown)
+안내 시에는 반드시 아래 목차를 사용하여 구체적인 행동을 지시하세요.
+
+## 🗑️ [한국어 분류명] 배출 가이드
+* **비우기/헹구기 🚿:** (내용물을 비우고 물로 씻어야 하는지 설명)
+* **분리하기 ✂️:** (라벨, 뚜껑, 테이프 등 다른 재질 제거 여부)
+* **부피 줄이기 🦶:** (찌그러뜨리거나 접어서 부피를 줄이는 방법)
+* **배출 장소 📦:** (투명 페트병 전용, 캔류, 일반쓰레기 등 배출 위치)
+
+# 제약 사항
+- 입력된 품목 명(tag)이 영어라면 한국어로 자연스럽게 번역하세요 (예: cardboard -> 골판지 박스).
+- 사용자가 헷갈릴 만한 부분(예: 씻어도 얼룩진 컵라면 용기 등)은 '💡 꿀팁'으로 한 줄 덧붙여주세요.
 """
-
-    user_prompt = (
-            f"분리수거 품목: '{identified_tag}' 에 대한 분리수거 방법을 알려주세요."
-            f"{conf_text_ko}"
+        user_prompt = (
+            f"분리수거 품목: '{identified_tag}'{conf_text_ko}. "
+            "이 정보와 정확도를 바탕으로 가이드를 제공해주세요."
         )
 
     try:
@@ -114,7 +127,7 @@ Formatting Rules:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.3,
+            temperature=0.3, # 설명서이므로 창의성을 낮춤
         )
         return response.choices[0].message.content
 
