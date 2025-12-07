@@ -194,19 +194,25 @@ def page():
                 if "error" in cv_result:
                     st.session_state.cv_result = cv_result
                     st.session_state.guide = None
+                
                 else:
                     tag = cv_result["tag"]
+                    prob = cv_result["probability"]  # 👈 0~1 사이 신뢰도
 
                     with st.spinner(t["spinner_guide"]):
-                        # ⚠️ call_openai_api(tag, lang=lang) 형태로 지원하도록 backend 수정 필요
                         try:
-                            guide = call_openai_api(tag, lang=lang)
+                            guide = call_openai_api(
+                                identified_tag=tag,
+                                confidence=prob,   # 👈 여기!
+                                lang=lang,
+                            )
                         except TypeError:
-                            # 만약 기존 시그니처가 (tag)만 받는 경우를 대비한 fallback
-                            guide = call_openai_api(tag)
+                            # (혹시 구버전 함수가 배포돼 있을 때 대비)
+                            guide = call_openai_api(tag, lang=lang)
 
                     st.session_state.cv_result = cv_result
                     st.session_state.guide = guide
+
         else:
             st.info(t["upload_hint"])
 
