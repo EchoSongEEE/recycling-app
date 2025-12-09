@@ -5,7 +5,8 @@ from streamlit_js_eval import get_geolocation
 
 
 def page():
-    st.subheader("🗺️ 서울시 분리배출 장소 지도")
+    st.title("📦 서울시 분리배출 장소 지도")
+    st.caption("재활용품 수거함의 위치를 지도로 제공해요. 지금은 용산구 수거함의 위치만 제공하고 있어요.")
 
     # 지도 중심 좌표 설정 (사용자의 현위치 / 기본좌표 - 서울시청)
     location = get_geolocation()
