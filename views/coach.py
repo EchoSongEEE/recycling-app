@@ -47,6 +47,17 @@ TEXTS = {
             "분리배출 전에 한 번 더 육안으로 확인해 주세요."
         ),
         "uploaded_image_label": "업로드된 이미지",
+        "privacy_title": "🛡️ 개인정보 보호 및 보안, 공정성 방침 안내",
+        "privacy_content": """
+        <div style="font-size: 0.85rem; color: #666; line-height: 1.4;">
+        <strong>1. 개인정보 보호 (Privacy)</strong><br>
+        업로드한 이미지는 <strong>서버에 저장되지 않습니다.</strong> 
+        AI 분석을 위해 메모리에서 일시적으로 사용된 후 <strong>즉시 자동 삭제</strong>됩니다.<br><br>
+        <strong>2. 공정성 (Fairness)</strong><br>
+        본 AI는 제품의 브랜드, 가격, 낡음 정도에 편견을 갖지 않고 
+        오직 <strong>'재질'</strong>에 근거하여 공평하게 안내합니다.
+        </div>
+        """
     },
     "en": {
         "title": "♻️ AI-based Recycling Sorting Coach",
@@ -80,6 +91,17 @@ TEXTS = {
             "Please double-check the item yourself before disposal."
         ),
         "uploaded_image_label": "Uploaded Image",
+        "privacy_title": "🛡️ Privacy, Security & Fairness Policy  ",
+        "privacy_content": """
+        <div style="font-size: 0.85rem; color: #666; line-height: 1.4;">
+        <strong>1. Privacy & Security</strong><br>
+        Uploaded images are <strong>NOT saved</strong> on any server. 
+        They are <strong>deleted immediately</strong> from memory after analysis.<br><br>
+        <strong>2. Fairness</strong><br>
+        This AI provides unbiased instructions based solely on <strong>materials</strong>, 
+        regardless of brand, price, or condition.
+        </div>
+        """
     },
 }
 
@@ -171,6 +193,9 @@ def page():
             type=["jpg", "jpeg", "png"],
         )
 
+        with st.expander(t["privacy_title"], expanded=True): 
+            st.markdown(t["privacy_content"], unsafe_allow_html=True)
+
         if uploaded_file is None:
             st.session_state.cv_result = None
             st.session_state.guide = None
@@ -212,16 +237,6 @@ def page():
 
                     st.session_state.cv_result = cv_result
                     st.session_state.guide = guide
-
-            st.markdown("---")
-            with st.expander("🛡️ 개인정보 보호 및 보안 안내", expanded=True):
-                st.markdown(
-                    """
-                    [데이터 처리 방침]
-                    - 본 서비스는 사용자의 이미지를 서버에 저장하지 않습니다.
-                    - 업로드된 사진은 AI 분석 목적으로만 일시 사용되며, 분석 직후 메모리에서 즉시 폐기됩니다.
-                    - 개인 신상이 드러날 수 있는 사진(얼굴 등)은 업로드에 유의해주세요.
-                    """)
                 
 
         else:
