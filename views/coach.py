@@ -47,7 +47,7 @@ TEXTS = {
             "분리배출 전에 한 번 더 육안으로 확인해 주세요."
         ),
         "uploaded_image_label": "업로드된 이미지",
-        "privacy_title": "🛡️ 개인정보 보호 및 보안, 공정성 방침 안내",
+        "privacy_title": "🛡️ 개인정보 보호 및 공정성 방침",
         "privacy_content": """
         <div style="font-size: 0.85rem; color: #666; line-height: 1.4;">
         <strong>1. 개인정보 보호 (Privacy)</strong><br>
@@ -91,7 +91,7 @@ TEXTS = {
             "Please double-check the item yourself before disposal."
         ),
         "uploaded_image_label": "Uploaded Image",
-        "privacy_title": "🛡️ Privacy, Security & Fairness Policy  ",
+        "privacy_title": "🛡️ Privacy & Fairness Policy",
         "privacy_content": """
         <div style="font-size: 0.85rem; color: #666; line-height: 1.4;">
         <strong>1. Privacy & Security</strong><br>
@@ -193,7 +193,7 @@ def page():
             type=["jpg", "jpeg", "png"],
         )
 
-        with st.expander(t["privacy_title"], expanded=True): 
+        with st.expander(t["privacy_title"], expanded=False): 
             st.markdown(t["privacy_content"], unsafe_allow_html=True)
 
         if uploaded_file is None:
